@@ -41,7 +41,7 @@ parallel is not faster — it is a rework waiting to happen.
 | Two agents pushing/merging the same repo/branch | Duplicate commit or non-fast-forward |
 | Two agents driving the same browser/preview | One session, one driver |
 | Builder + vet on the same artifact at the same time | A vet cannot cold-read a moving diff; "ship" on a moving target is not a verdict |
-| Interfering workstreams with no frozen interface | If the interface is not frozen first, sequence; if it is frozen, split the files, then parallelise |
+| Interfering work items with no frozen interface | If the interface is not frozen first, sequence; if it is frozen, split the files, then parallelise |
 
 **Briefing rules for a parallel agent** (a child does not
 inherit the parent's transcript, so the brief must be
@@ -75,7 +75,7 @@ without restarting other tracks.
 | Verdict (line 1 of vet file) | Meaning | Next step |
 |---|---|---|
 | `verdict: ship` | Proposal accepted, no majors | Parent may move to verify/merge; browser gate still owed separately |
-| `verdict: ship-with-nits` | Proposal accepted, **gates recorded** | Record every major as a checklist gate before the next claim; STATE stays `IN_REVIEW` until the parent merges; nits carried forward explicitly |
+| `verdict: ship-with-nits` | Proposal accepted, **gates recorded** | Record every major as a checklist gate before the next claim; state stays `IN_REVIEW` until the parent merges; nits carried forward explicitly |
 | `verdict: rework` | Proposal not accepted | Back to `IMPLEMENTING`; the vet's majors become the next iteration's first tasks; `verify --require-vet` prints `VERIFY FAIL` |
 | No vet file | No verdict exists | `verify` without `--require-vet` prints only `CHECKS PASS (vet pending)`; that is **not** a merge, and must never be quoted as one |
 
@@ -86,7 +86,7 @@ without restarting other tracks.
 | Tests pass (unit, integration, store logic) | **No** — tests prove logic, not rendered buttons |
 | Worker's own headless run passes | **No** — supporting evidence only |
 | Parent drives the real built output in a real browser (headless shell counts for the web gate), step by step, with an evidence file | **Yes, for the web gate** |
-| Parent drives it on a real phone (iPhone Safari, Add to Home Screen, offline reload after kill) | **Yes, for the phone gate** — a separate gate; a headless pass never implies it |
+| Parent drives it on a real phone (install, offline reload after kill) | **Yes, for the phone gate** — a separate gate; a headless pass never implies it |
 | No evidence file exists | **No** — a gate without evidence is a claim, not a gate |
 
 ## Decision 5 — Is a push landed?
@@ -95,5 +95,5 @@ without restarting other tracks.
 |---|---|
 | Worker says it pushed | **No** — a report is not an artifact |
 | Local clone shows the commit | **No** — a clone with no remote proves nothing except that it is disconnected |
-| Authenticated API shows: private, default branch `main`, tip SHA + message + parent chain match, tree clean (no `node_modules`, no `dist`, no secrets, no real data) | **Yes** |
+| Authenticated API shows: visibility, default branch unchanged, tip SHA + message + parent chain match, tree clean (no `node_modules`, no `dist`, no secrets, no real data) | **Yes** |
 | Push output was piped through `tail` and "looked fine" | **No** — the pipeline's exit code is `tail`'s, masking the script's real failure; capture output to a file and read its result JSON |

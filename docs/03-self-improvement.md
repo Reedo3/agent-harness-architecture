@@ -8,15 +8,16 @@ product — just a loop with a memory.
 
 ## A note on the name first
 
-The user wording for this page was "harness-2 / Google
+The wording sometimes used for this page is "harness-2 / Google
 self-improvement". Plain answer: **no Google product or Google
-self-improvement system appears in any source file read for this
-repo**, and none is claimed here. What the sources actually
-contain, and what this page documents, is:
+self-improvement system appears in any architecture source read
+for this repo**, and none is claimed here. What the sources
+actually contain, and what this page documents, is:
 
 - the harness skill's **weekly retro** (self-improvement loop),
-- the BJJ and Flo forges' **vet-loop compounding**,
-- the BJJ **RL loop** (select → build → vet → reward),
+- **vet-loop compounding** (each vet round's majors become the
+  next iteration's first tasks),
+- a **selection loop** (select → build → vet → reward),
 - worker process proposals triaged by the retro.
 
 If a "Google self-improvement" system exists elsewhere, it is
@@ -46,28 +47,28 @@ for the human**, never an applied change. The agent never
 rewrites the control plane itself. Without that gate, "self-
 improvement" is just the agent quietly loosening its own rules.
 
-## Loop 1 — Vet-loop compounding (observed, Flo, 2026-10-24)
+## Loop 1 — Vet-loop compounding (generic pattern)
 
 Each vet round's majors become the **next iteration's first
 tasks**, recorded as gates in the checklist before the next claim
 is issued — not as a vague "address feedback" note.
 
-| Vet round | Majors | Became |
+| Vet round (generic example) | Majors (generic example) | Became |
 |---|---|---|
-| WS0 vet (ship-with-nits) | M1–M5: completed-list, dual-store delete, synthetic labelling, line-scoped partner sensor, vet-gated verify | Fixes run, then fixes vet |
-| WS0-fixes vet (ship-with-nits) | Fix-Major 1: both-stores-failing delete; Fix-Major 2: M5 regression test; nit N2: Log defaults to today | WS1 run |
-| WS1 vet (ship-with-nits) | Major 1: record ws0 completed before any merge; Major 2: edit + date-change must not duplicate; Major 3: wire `test_verify.py` into a real command | Next run's first tasks (gates in checklist) |
+| First vet (ship-with-nits) | Completed-list sequencing, dual-store delete, synthetic labelling, line-scoped sensor exemption, vet-gated verify | Fixes run, then fixes vet |
+| Fixes vet (ship-with-nits) | Both-stores-failing delete; regression test for the vet gate; a default-date nit | Next work item's run |
+| Next work item's vet (ship-with-nits) | Record the earlier item completed before any merge; edit + date-change must not duplicate; wire the regression test into a real command | Next run's first tasks (gates in checklist) |
 
 Two rules inside this loop:
 
-- **Ship-with-nits is not a merge.** STATE stays `IN_REVIEW`
-  through both WS0 vets. It means "proposal accepted, gates
+- **Ship-with-nits is not a merge.** State stays `IN_REVIEW`
+  until the parent merges. It means "proposal accepted, gates
   recorded", never "deploy".
 - **Nits are carried forward explicitly**, never dropped because
-  a vet passed: stale claim after `MERGED → IDLE`, `advance`
-  printing `VERIFY` on a rework verdict, service-worker
-  auto-update vs "no forced update mid-logging", same-second
-  journal bursts (WS0-only, must not repeat).
+  a vet passed: a stale claim after `MERGED → IDLE`, `advance`
+  printing `VERIFY` on a rework verdict, same-second journal
+  bursts from a bootstrapping run (a one-time artefact, which
+  must not repeat).
 
 ## Loop 2 — Weekly harness retro
 
@@ -78,9 +79,11 @@ Two rules inside this loop:
 | Record | The failure → fix mapping, dated | Future sessions can see why a rule exists |
 | Apply or propose | Sensors, brief text, non-transition code: apply. Transitions, merge authority, permissions, prediction/privacy rules: propose to the human | The agent never rewrites its own cage |
 
-- BJJ: cron, Sundays 09:30 ET, reporting to the project chat.
-- Flo: planned for Sundays, **not yet wired as a cron** as of
-  2026-10-24. Saying otherwise would be inventing a cron.
+- Cadence is a project choice; weekly is the usual pattern,
+  reporting to the project chat.
+- A retro that is planned but not yet wired as a scheduled job
+  must be labelled **planned**, not live. Saying otherwise
+  would be inventing a schedule.
 - The retro also asks the re-derive question: which scaffolding
   still earns its keep? Delete checks that no longer prevent
   real failures.
@@ -94,31 +97,32 @@ dated and attributed. This is the cheapest loop in the system
 and the one most often skipped — which is why it is written
 into the brief rather than left to goodwill.
 
-## Loop 4 — RL loop (BJJ only, daily)
+## Loop 4 — Selection loop (optional, daily pattern)
 
 This is the loop that picks *what* to build next, not just how
-to build it well.
+to build it well. A project may use a fixed priority list
+instead; the selection loop is optional, not required.
 
 ```mermaid
 flowchart LR
     S[Select] --> B[Build] --> V[Independent vet] --> R[Reward] --> U[Update multipliers] --> S
 ```
 
-| Part | How it works (from AGENTS.md, RL LOOP) |
+| Part | How it works |
 |---|---|
-| Select | Each feature scored by `user_value × feasibility × evidence × learned type_multiplier` (contextual-bandit style). One feature at a time. Never pick panel-killed features or the parked vision experiment. |
+| Select | Each feature scored by `user_value × feasibility × evidence × learned type_multiplier` (contextual-bandit style). One feature at a time. Never pick features a prior decision killed or parked. |
 | Build | One feature, built by a worker. |
 | Vet | Independent checker, fresh agent, every build. |
 | Reward | ship = +1, ship-with-nits = +0.5, rework = −1. The human's chat feedback applies ±2. |
-| Update | Multipliers update by exponential moving average, stored in the RL policy file. |
+| Update | Multipliers update by exponential moving average, stored in the selection policy file. |
 
-- Cadence: daily cron `bjj-rl-loop`. The earlier weekly
-  Wednesday design panel is **dead** (disabled 2026-10-13, never
-  re-enable without an explicit go-ahead) — continuous building
-  replaced debate as the decision mechanism.
-- The RL loop does not override the vet gate or the merge gate.
-  It picks the next feature; the vet still decides whether it
-  ships.
+- Cadence is a project choice; daily is the usual pattern.
+  Continuous building replaced debate panels as the decision
+  mechanism in the pattern's history — a panel that was disabled
+  must never be re-enabled without an explicit go-ahead.
+- The selection loop does not override the vet gate or the
+  merge gate. It picks the next feature; the vet still decides
+  whether it ships.
 
 ## What self-improvement is not
 

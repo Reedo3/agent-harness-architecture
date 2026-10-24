@@ -38,7 +38,10 @@ happy path plus its two rejection arrows.
 | **Session-start ritual** | Read memory, board, and goal state before acting. Pick up the actual current state. | The first act is a read, never an assumption. |
 | **Re-derive per model release** | Every check encodes an assumption about a model's weakness. Assumptions go stale. | The retro asks: which scaffolding do we delete? Keep only what still prevents real failures. |
 
-## Survival parts, each with a real failure behind it
+## Survival parts, each with a generic failure behind it
+
+The failures below are **generic examples**, invented to illustrate
+the pattern. They are not reports about any real project.
 
 ### Heartbeat + supervisor
 
@@ -48,12 +51,13 @@ in `IMPLEMENTING` as wedged: terminate the attempt, resume a
 fresh worker from the progress note and branch. Resume, never
 restart from zero.
 
-- **Failure that built it (BJJ, 2026-10-05):** a worker vanished
-  with no heartbeat, no durable state, no supervisor, no resume,
-  no learning. Nobody noticed for two days.
-- **Failure that built the Discord version:** a bot died silently
-  between checks; the fix was a supervisor process plus a
-  heartbeat the watchdog could read, with crash-loop backoff.
+- **Generic failure that builds it:** a worker vanishes with no
+  heartbeat, no durable state, no supervisor, no resume, no
+  learning. Nobody notices for two days.
+- **Generic failure that builds the supervisor version:** a
+  long-running helper dies silently between checks; the fix is a
+  supervisor process plus a heartbeat the watchdog can read,
+  with crash-loop backoff.
 
 ### Foreground-only execution
 
@@ -61,12 +65,11 @@ Brief every worker: **never** start a background process. Run
 everything in the foreground; a server test runs in one
 foreground command that kills the server in the same command.
 
-- **Failure that built it (SendShield, 2026-10-22, twice in one
-  morning):** two builders died with "background exec disappeared
-  before its result was delivered" when the runtime reaped the
-  process. The repo on disk was healthy both times — no work was
-  lost, but the loop halted. The agent is disposable; the work on
-  disk is not.
+- **Generic failure that builds it:** two builders die with
+  "background exec disappeared before its result was delivered"
+  when the runtime reaps the process. The repo on disk is healthy
+  both times — no work is lost, but the loop halts. The agent is
+  disposable; the work on disk is not.
 
 ### Vet-gated verify
 
@@ -83,16 +86,18 @@ flowchart TD
 **What this diagram does NOT show:** the regression test that
 keeps this split honest. See below.
 
-- **Failure that built it (Flo vet M5, 2026-10-24):** plain
-  `verify` printed a bare `VERIFY PASS` without ever reading a
-  vet verdict, so a future loop could merge on build + test
-  alone. Fix: split the wording, and add a temp-copy regression
-  test (`test_verify.py`, five paths: plain, ship, ship-with-nits,
-  rework, missing) that never mutates real state. The next edit
-  to `verify` cannot silently regress the gate — unless nobody
-  runs the test, which is exactly what Flo vet Major 3 (WS1)
-  caught: the test existed but was wired into no command. A test
-  nobody runs decays like a check nobody reads.
+- **Generic failure that builds it:** plain `verify` prints a
+  bare `VERIFY PASS` without ever reading a vet verdict, so a
+  future loop could merge on build + test alone. Fix: split the
+  wording, and add a temp-copy regression test (five paths:
+  plain, ship, ship-with-nits, rework, missing) that never
+  mutates real state. The next edit to `verify` cannot silently
+  regress the gate — unless nobody runs the test, which is the
+  next failure to catch: a test that exists but is wired into no
+  command decays like a check nobody reads. Fix that by wiring
+  it into the forge verify path (or documenting it as a required
+  step in the worker brief) and proving the wiring by running
+  that command.
 
 ### Parent browser gate
 
@@ -100,68 +105,70 @@ Generic subagents cannot operate a live browser: no clicking,
 signing in, forms, or driving a preview as a user. So browser
 click-through is a **parent-owned** gate with its own checklist
 item and its own evidence file. A worker's headless run is
-supporting evidence only; it never closes the gate. Real-phone
-behaviour (iPhone Safari, Add to Home Screen, offline reload)
+supporting evidence only; it never closes the gate. Real-device
+behaviour (install on a real phone, offline reload after kill)
 is a separate, later gate that a headless pass never implies.
 
-- **Failure pattern (Flo, two vet rounds in a row):** both vets
-  had to record "browser click-through NOT done" as a gap,
-  because tests prove store logic, not rendered buttons.
-- **WS0 gate, closed by the parent:** load synthetic days → save
-  a hand day → calendar shows it → reload persists → export
-  contains the hand day → delete-all → reload empty. Evidence
-  file, not a claim.
+- **Generic failure pattern:** two vet rounds in a row have to
+  record "browser click-through NOT done" as a gap, because
+  tests prove store logic, not rendered buttons.
+- **Generic gate, closed by the parent:** load demo data → save
+  a hand-entered day → calendar shows it → reload persists →
+  export contains the hand day → delete-all → reload empty.
+  Evidence file, not a claim.
 
-### Privacy sensors (Flo's instance — sensors are app-specific)
+### Privacy sensors
 
-Sensors, in priority order for a health app: heartbeat age,
+Sensors, in priority order for a typical project: heartbeat age,
 build/test/check exits, privacy-check result, vet verdict on
 file, remote tip + tree after push, browser-gate evidence on
-file. The privacy check scans for network calls, analytics
-SDKs, partner-sharing code, and banned claims.
+file. A privacy check scans for network calls, analytics SDKs,
+sharing code, and banned claims. Sensors are project-specific:
+a health project scans for health-data leaks; another project
+scans for whatever its own safety rules forbid. The pattern is
+the same; the keyword list is not.
 
-- **Failure that built the line-scoped exemption (Flo vet M4):**
-  a file-wide partner exemption would have let any future
-  partner code in the same file sail through. Fix: a partner
-  mention passes only on a line that itself contains the
-  deferred-workstream note, plus a negative test (same-line
-  passes, cross-line fails).
+- **Generic failure that builds a line-scoped exemption:** a
+  file-wide exemption would let any future sharing code in the
+  same file sail through. Fix: a mention passes only on a line
+  that itself contains the deferred-workstream note, plus a
+  negative test (same-line passes, cross-line fails).
 - **Documented limit, not hidden:** a keyword sensor is a
-  tripwire, not a proof. Sharing code that never uses the word
-  "partner" would pass it. The human vet remains the sharing
-  gate; the sensor must never be cited as proof that no sharing
-  code exists.
+  tripwire, not a proof. Sharing code that never uses the
+  sensor's keyword would pass it. The human vet remains the
+  sharing gate; the sensor must never be cited as proof that no
+  sharing code exists.
 
 ### Dual-store delete + synthetic labelling
 
-- **Failure that built it (Flo vet M2 → Fix-Major 1):** delete
-  wiped one store but not the other, and both-stores-failing
-  still resolved as success while the UI said "deleted". Fix:
-  wipe both stores best-effort each, throw only when both fail,
-  and show "Delete failed — try again" with the confirm card
-  left open. Delete is the one feature a user must trust
-  absolutely; silent success is its exact forbidden failure mode.
-- **Failure that built it (Flo vet M3):** hand-entered days were
-  labelled synthetic, and empty exports counted as synthetic by
-  vacuous truth. Fix: hand days are `synthetic: false`; the
-  export flag is computed as "non-empty AND every day synthetic".
-  Labelling is the only thing separating demo data from real
-  data; a mislabelled export corrupts that boundary.
+- **Generic failure that builds it:** delete wipes one store
+  but not the other, and both-stores-failing still resolves as
+  success while the UI says "deleted". Fix: wipe both stores
+  best-effort each, throw only when both fail, and show "Delete
+  failed — try again" with the confirm card left open. Delete is
+  the one feature a user must trust absolutely; silent success
+  is its exact forbidden failure mode.
+- **Generic failure that builds it:** hand-entered rows are
+  labelled synthetic, and empty exports count as synthetic by
+  vacuous truth. Fix: hand rows are `synthetic: false`; the
+  export flag is computed as "non-empty AND every row
+  synthetic". Labelling is the only thing separating demo data
+  from real data; a mislabelled export corrupts that boundary.
 
-### GitHub push discipline
+### Push discipline (git hosting)
 
-Push from a staging repo, never from the goal directory (which
-is not a git repo). Seed an empty repo first (the empty-repo
-409). Use `--from <newest local SHA> --base <remote full
+Push from a staging repo, never from a working directory that
+is not a git repo. Seed an empty repo first (the empty-repo
+error). Use `--from <newest local SHA> --base <remote full
 40-char SHA>`; `--from` replays from that commit **onward**, so
 pointing at an older commit replays everything after it, and a
 second push for the same commit duplicates it. Never pipe the
 push through `tail` (its exit code masks the script's failure).
-After every push, verify via the API: private, default branch
-still `main`, tip SHA + message + parent chain, tree clean (no
-`node_modules`, no `dist`, no secrets, no real health data).
-Never report repo state from a local clone — a clone with no
-remote proves nothing except that it is disconnected.
+After every push, verify via the API: visibility, default
+branch still the main branch, tip SHA + message + parent chain,
+tree clean (no `node_modules`, no `dist`, no secrets, no real
+data). Never report repo state from a local clone — a clone
+with no remote proves nothing except that it is disconnected.
 
 ## The three failure modes the harness is built against
 

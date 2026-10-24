@@ -45,7 +45,7 @@ prevents most cheating:
 
 | File | Who owns it | Agent may… |
 |---|---|---|
-| **Frozen** — rules of the game: state machine, priority list, prediction/privacy/safety rules | Human / parent | Read it. Never touch it. |
+| **Frozen** — rules of the game: state machine, priority list, prediction/privacy/safety rules for the project | Human / parent | Read it. Never touch it. |
 | **Mutable** — the one thing the agent changes: its branch, its progress note, its proposal | Worker | Change it, and only it. |
 | **Org code** — markdown instructions: scope, heartbeat, stop conditions, how to fix a failure | Parent, iterated over time | Read it. Propose changes to it; never apply them alone. |
 
@@ -54,18 +54,18 @@ rules, the scorer, and the work, then "done" is whatever the
 worker says. Separating them makes gaming structural, not just
 discouraged.
 
-## Concept → where it lives
+## Concept → where it lives (generic forge)
 
-| Concept | Skill file | Forge file | Real example |
+| Concept | Skill source | Typical forge file | Generic example |
 |---|---|---|---|
-| Deterministic control plane | graph skill §1 | `forge.py` (BJJ), `flo-forge.py` (Flo) | One transition per run; BJJ quiescent loop drains ready actions, max 8, until WAIT/NOOP |
-| States | graph skill §2 | `STATE.json` + control plane | `IDLE → CLAIMED → IMPLEMENTING → IN_REVIEW → VERIFYING → MERGED → IDLE` (both forges) |
-| Completed-list sequencing | graph skill (routing) | Flo `flo-forge.py`: `next_uncompleted()`, `completed: []` | Flo vet M1: without it, `advance` re-claimed ws0 forever. Fixed, then proven by `test_forge.py` on a temp copy |
-| Untrusted-proposer / trusted-verifier | graph skill §3 | Vet files `harness/vet/<ws>.md`, line 1 = verdict | Builder proposes; fresh vet cold-reads the diff, never the builder's summary |
-| Markdown as coordination interface | graph skill §4 | `org-code/WORKER_BRIEF.md`, `FEATURE_CHECKLIST.md` | Briefs are written for agents: scope, heartbeat, stop conditions, remediation steps |
-| Single scalar metric + ratchet | graph skill §5 | Build metric: verified checklist items merged/week (target ≥ 1) | A merge breaking log-save, export/delete, or adding a network call with health data is a revert, not a fix-forward |
-| Macro actions + parallelism | graph skill §6 | One workstream per worker; parallel only on disjoint file sets | Flo §8; BJJ §6b parallel tracks (see docs/05) |
-| Memory outside the context window | graph skill §7 | `STATE.json`, `JOURNAL.md`, `progress/<ws>.md`, `vet/<ws>.md` | "The agent forgets; the graph does not." A dead worker loses nothing the graph needs |
+| Deterministic control plane | Graph skill §1 | `forge.py` | One transition per run; a quiescent loop drains ready actions, max 8, until WAIT/NOOP |
+| States | Graph skill §2 | `STATE.json` + control plane | `IDLE → CLAIMED → IMPLEMENTING → IN_REVIEW → VERIFYING → MERGED → IDLE` |
+| Completed-list sequencing | Graph skill (routing) | `forge.py`: `next_uncompleted()`, `completed` list | Generic failure: without a completed list, `advance` re-claims a finished item forever after a merge. Fix: a completed list, a claim that refuses completed items, and a temp-copy test proving it |
+| Untrusted-proposer / trusted-verifier | Graph skill §3 | Vet files `harness/vet/<item>.md`, line 1 = verdict | Builder proposes; fresh vet cold-reads the diff, never the builder's summary |
+| Markdown as coordination interface | Graph skill §4 | `org-code/WORKER_BRIEF.md`, `FEATURE_CHECKLIST.md` | Briefs are written for agents: scope, heartbeat, stop conditions, remediation steps |
+| Single scalar metric + ratchet | Graph skill §5 | Build metric: verified checklist items merged per week (target ≥ 1, project choice) | A merge breaking a core feature, or adding an unreviewed network call, is a revert, not a fix-forward |
+| Macro actions + parallelism | Graph skill §6 | One work item per worker; parallel only on disjoint file sets | See docs/05, Decision 1 |
+| Memory outside the context window | Graph skill §7 | `STATE.json`, `JOURNAL.md`, `progress/<item>.md`, `vet/<item>.md` | "The agent forgets; the graph does not." A dead worker loses nothing the graph needs |
 
 ## The four preconditions for letting it run unattended
 
@@ -73,13 +73,12 @@ All four must hold. Missing any one, unattended operation is not honest:
 
 1. **Verifiable outputs** — metrics and checks, not opinions.
 2. **Reversible actions** — branches, reverts, local-first data the tester controls.
-3. **Short feedback cycles** — a vet and a browser drive per workstream, not per quarter.
-4. **Bounded action space** — one workstream, a brief's scope, nothing else.
+3. **Short feedback cycles** — a vet and a browser drive per work item, not per quarter.
+4. **Bounded action space** — one work item, a brief's scope, nothing else.
 
-Flo's tester deployment does **not** yet meet all four on its own:
-it additionally needs the tester's explicit opt-in, which is a
-human gate, not a harness gate. That is why deployment is
-parent-owned even though building is autonomous.
+A tester-facing deployment additionally needs the tester's explicit
+opt-in, which is a human gate, not a harness gate. That is why
+deployment is parent-owned even though building is autonomous.
 
 ## What the graph does not do
 
